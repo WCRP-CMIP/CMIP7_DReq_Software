@@ -29,6 +29,10 @@ for path in add_paths:
 import dreq_content as dc
 import dreq_query as dq
 
+# from importlib import reload
+# reload(dq)
+
+
 # use_dreq_version = 'first_export'
 use_dreq_version = 'v1.0alpha'
 
@@ -50,9 +54,9 @@ dq.DREQ_VERSION = use_dreq_version
 expt_vars = dq.get_requested_variables(content, use_opps, max_priority='Low')
 
 # Show user what we found
-print(f'For data request version {use_dreq_version}, number of requested variables found by experiment:')
+print(f'\nFor data request version {use_dreq_version}, number of requested variables found by experiment:')
 priority_levels = ['High', 'Medium', 'Low']
-for expt, req in expt_vars.items():
+for expt, req in expt_vars['experiment'].items():
     d = {p : 0 for p in priority_levels}
     for p in priority_levels:
         if p in req:
@@ -62,13 +66,9 @@ for expt, req in expt_vars.items():
 
 # Write the results to json
 filename = 'requested.json'
-for expt, req in expt_vars.items():
-    # Change sets to lists
-    for p in req:
-        req[p] = sorted(req[p])
 with open(filename, 'w') as f:
     json.dump(expt_vars, f, indent=4, sort_keys=True)
-    print('Wrote requested variables to ' + filename)
+    print('\nWrote requested variables to ' + filename)
 
 # To remove locally cached version:
 # dc.delete(use_dreq_version)
