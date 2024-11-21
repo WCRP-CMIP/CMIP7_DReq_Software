@@ -57,7 +57,7 @@ if len(expt_vars['experiment']) > 0:
     # Show user what was found
     print(f'\nFor data request version {use_dreq_version}, number of requested variables found by experiment:')
     priority_levels = ['Core', 'High', 'Medium', 'Low']
-    for expt, req in expt_vars['experiment'].items():
+    for expt, req in sorted(expt_vars['experiment'].items()):
         d = {p : 0 for p in priority_levels}
         for p in priority_levels:
             if p in req:
