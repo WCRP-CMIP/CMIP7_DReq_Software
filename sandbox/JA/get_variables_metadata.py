@@ -2,7 +2,6 @@
 '''
 Extract metadata of CMOR variables and write to json
 '''
-
 import sys
 import json
 add_paths = ['../MS/dreq_api/', '../GR/']
@@ -68,16 +67,28 @@ CFStandardName = None
 if 'CF Standard Names' in base:
     CFStandardName = base['CF Standard Names']
 
+CMORtables = base['Table Identifiers']
+filter_by_cmor_table = True
+include_cmor_tables = ['Amon', 'day']
+
+Realm = base['Modelling Realm']
+CellMeasures = base['Cell Measures']
+
+
 # Use compound name to look up record id of each variable in the Vars table
 var_name_map = {record.compound_name : record_id for record_id, record in Vars.records.items()}
 assert len(var_name_map) == len(Vars.records), 'compound names do not uniquely map to variable record ids'
 
-# Dicts to store the results
+if filter_by_cmor_table:
+    print('Retaining only these CMOR tables: ' + ', '.join(include_cmor_tables))
 all_var_info = {}
-
 for var in Vars.records.values():
 
-    var_info = {}
+    if filter_by_cmor_table:
+        assert len(var.table) == 1
+        table_id = CMORtables.get_record(var.table[0]).name
+        if table_id not in include_cmor_tables:
+            continue
 
     if isinstance(var.frequency[0], str):
         # retain this option for non-consolidated raw export?
@@ -94,81 +105,118 @@ for var in Vars.records.values():
     if hasattr(var, 'cell_methods'):
         assert len(var.cell_methods) == 1
         link = var.cell_methods[0]
-        cell_methods = CellMethods.get_record(link).cell_methods
+        cm = CellMethods.get_record(link)
+        cell_methods = cm.cell_methods
+        area_label_dd = cm.brand_id
     else:
         cell_methods = ''
+        area_label_dd = ''
 
     # get the 'Spatial Shape' record, which contains info about dimensions
     assert len(var.spatial_shape) == 1
     link = var.spatial_shape[0]
     spatial_shape = SpatialShape.get_record(link)
 
-    var_dims = []
+    dims_list = []
     dims = None
     if hasattr(spatial_shape, 'dimensions'):
         for link in spatial_shape.dimensions:
             dims = Dimensions.get_record(link)
-            var_dims.append(dims.name)
+            dims_list.append(dims.name)
+    dims_list.append(temporal_shape.name)
 
     # Get CF standard name, if it exists
     # record_id = var.cf_standard_name_from_physical_parameter[0]  # not a real link! 
     # phys_param = PhysicalParameter.get_record(record_id)
     link = var.physical_parameter[0]
     phys_param = PhysicalParameter.get_record(link)
+    out_name = phys_param.name
+    standard_name = ''
+    standard_name_proposed = ''
     if hasattr(phys_param, 'cf_standard_name'):
         if isinstance(phys_param.cf_standard_name, str):
             # retain this option for non-consolidated raw export?
-            var_info.update({
-                'CF standard name' : phys_param.cf_standard_name,
-            })
+            standard_name = phys_param.cf_standard_name
         else:
             link = phys_param.cf_standard_name[0]
             cfsn = CFStandardName.get_record(link)
-            var_info.update({
-                'CF standard name' : cfsn.name,
-            })
+            standard_name = cfsn.name
     else:
-        var_info.update({
-            'CF standard name (proposed)' : phys_param.proposed_cf_standard_name,
-        })
+        standard_name_proposed = phys_param.proposed_cf_standard_name
 
+    modeling_realm = [Realm.get_record(link).id for link in var.modelling_realm]
+
+    if hasattr(var, 'cell_measures'):
+        assert len(var.cell_measures) == 1
+        link = var.cell_measures[0]
+        cell_measures = CellMeasures.get_record(link).name
+    else:
+        cell_measures = ''
+
+    if hasattr(var, 'positive_direction'):
+        positive = var.positive_direction
+    else:
+        positive = ''
+
+    var_info = OrderedDict()
+    # Insert fields in order given by CMIP6 cmor tables (https://github.com/PCMDI/cmip6-cmor-tables)
+    var_info.update({
+        'frequency' : frequency,
+        'modeling_realm' : ' '.join(modeling_realm),
+    })
+    if standard_name != '':
+        var_info['standard_name'] = standard_name
+    else:
+        var_info['standard_name_proposed'] = standard_name_proposed
     var_info.update({
         'units' : phys_param.units,
         'cell_methods' : cell_methods,
-        'dimensions' : ' '.join(var_dims),
-        'frequency' : frequency,
+        'cell_measures' : cell_measures,
+
+        'long_name' : var.title,
+        'comment' : var.description,
+
+        'dimensions' : ' '.join(dims_list),
+        'out_name' : out_name,
+        'type' : var.type,
+        'positive' : positive,
+
         'spatial_shape' : spatial_shape.name,
         'temporal_shape' : temporal_shape.name,
 
-
-        # 'hor_label_dd' : spatial_shape.hor_label_dd,
-        # 'vertical_label_dd' : spatial_shape.vertical_label_dd,
-        # 'temporal_brand' : temporal_shape.brand,
+        # 'temporalLabelDD' : temporal_shape.brand,
+        # 'verticalLabelDD' : spatial_shape.vertical_label_dd,
+        # 'horizontalLabelDD' : spatial_shape.hor_label_dd,
+        # 'areaLabelDD' : area_label_dd,  # this comes from cell methods
     })
+    for k,v in var_info.items():
+        var_info[k] = v.strip()
 
-    # var_name = var.compound_name
-    var_name = dq.get_unique_var_name(var)
+    # var_name = dq.get_unique_var_name(var) # type of name used is set by dreq_classes.UNIQUE_VAR_NAME
+    var_name = var.compound_name  # note, comment in Header below refers to Compound Name, so update it if this changes
     assert var_name not in all_var_info, 'non-unique variable name: ' + var_name
     all_var_info[var_name] = var_info
+
+    del var_info, var_name
 
 
 # Sort the all-variables dict
 d = OrderedDict()
-for var_name in sorted(all_var_info.keys(), key=str.lower):
+for var_name in sorted(all_var_info, key=str.lower):
     d[var_name] = all_var_info[var_name]
 all_var_info = d
 del d
 
+
 d = OrderedDict({
     'Header' : OrderedDict({
         "dreq version": use_dreq_version,
-        "Comment" : "Provisional selected information on all variables requested by at least one Opportunity. To be superseded by a systematic collection of all metadata needed by CMOR and other relevant information on each variable (likely using a single file for each variable). As an interim partial solution this file provides a very basic subset of information about the requested variables. Each variable is idenfied by a compound name comprised of a CMIP6-era table name and a short variable name."
+        "Comment" : "Metadata attributes that characterize CMOR variables. Each variable is uniquely idenfied by a compound name comprised of a CMIP6-era table name and a short variable name."
     }),
     dq.UNIQUE_VAR_NAME : all_var_info,
 })
 
-filepath = 'all_var_info.json'
+filepath = '_all_var_info.json'
 with open(filepath, 'w') as f:
     json.dump(d, f, indent=4)
     print(f'wrote {filepath} for {len(all_var_info)} variables')
-
