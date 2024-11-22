@@ -23,6 +23,9 @@ from collections import OrderedDict
 filter_by_cmor_table = True  # False ==> include all tables (i.e., all variables in the data request)
 include_cmor_tables = ['Amon', 'day']
 
+organize_by_standard_name = True  # True ==> write additional file that groups variables by CF standard name
+
+
 ###############################################################################
 # Load data request content
 
@@ -221,7 +224,7 @@ all_var_info = d
 del d
 
 
-d = OrderedDict({
+out = OrderedDict({
     'Header' : OrderedDict({
         "dreq version": use_dreq_version,
         "Comment" : "Metadata attributes that characterize CMOR variables. Each variable is uniquely idenfied by a compound name comprised of a CMIP6-era table name and a short variable name."
@@ -231,5 +234,32 @@ d = OrderedDict({
 
 filepath = '_all_var_info.json'
 with open(filepath, 'w') as f:
-    json.dump(d, f, indent=4)
+    json.dump(out, f, indent=4)
     print(f'wrote {filepath} for {len(all_var_info)} variables')
+
+if organize_by_standard_name:
+
+    name_in_file = {
+        'standard_name' : 'CF Standard Name',
+        'standard_name_proposed' : 'CF Standard Name (Proposed)',
+    }
+    for sn_type in ['standard_name', 'standard_name_proposed']:
+        names = set()
+        for var_info in all_var_info.values():
+            if sn_type in var_info:
+                names.add(var_info[sn_type])
+        names = sorted(set(names), key=str.lower)
+        sn = OrderedDict()
+        for name in names:
+            sn[name] = OrderedDict()
+            for var_name, var_info in all_var_info.items():
+                if var_info[sn_type] == name:
+                    sn[name][var_name] = var_info
+        if len(sn) > 0:
+            out[name_in_file[sn_type]] = sn
+    out.pop('Compound Name')
+
+    filepath = '_var_info_by_standard_name.json'
+    with open(filepath, 'w') as f:
+        json.dump(out, f, indent=4)
+        print(f'wrote {filepath}')
