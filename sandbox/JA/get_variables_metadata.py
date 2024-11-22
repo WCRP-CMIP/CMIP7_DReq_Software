@@ -20,7 +20,7 @@ from collections import OrderedDict
 ###############################################################################
 
 
-filter_by_cmor_table = True  # False ==> include all tables (i.e., all variables in the data request)
+filter_by_cmor_table = not True  # False ==> include all tables (i.e., all variables in the data request)
 include_cmor_tables = ['Amon', 'day']
 
 organize_by_standard_name = True  # True ==> write additional file that groups variables by CF standard name
@@ -97,6 +97,7 @@ for var in Vars.records.values():
 
     assert len(var.table) == 1
     table_id = CMORtables.get_record(var.table[0]).name
+
     if filter_by_cmor_table:
         if table_id not in include_cmor_tables:
             continue
@@ -113,15 +114,15 @@ for var in Vars.records.values():
     link = var.temporal_shape[0]
     temporal_shape = TemporalShape.get_record(link)
 
+    cell_methods = ''
+    area_label_dd = ''
     if hasattr(var, 'cell_methods'):
         assert len(var.cell_methods) == 1
         link = var.cell_methods[0]
         cm = CellMethods.get_record(link)
         cell_methods = cm.cell_methods
-        area_label_dd = cm.brand_id
-    else:
-        cell_methods = ''
-        area_label_dd = ''
+        if hasattr(cm, 'brand_id'):
+            area_label_dd = cm.brand_id
 
     # get the 'Spatial Shape' record, which contains info about dimensions
     assert len(var.spatial_shape) == 1
@@ -157,17 +158,20 @@ for var in Vars.records.values():
 
     modeling_realm = [Realm.get_record(link).id for link in var.modelling_realm]
 
+    cell_measures = ''
     if hasattr(var, 'cell_measures'):
-        assert len(var.cell_measures) == 1
-        link = var.cell_measures[0]
-        cell_measures = CellMeasures.get_record(link).name
-    else:
-        cell_measures = ''
+        # assert len(var.cell_measures) == 1
+        # link = var.cell_measures[0]
+        # cell_measures = CellMeasures.get_record(link).name
+        cell_measures = [CellMeasures.get_record(link).name for link in var.cell_measures]
 
+    positive = ''
     if hasattr(var, 'positive_direction'):
         positive = var.positive_direction
-    else:
-        positive = ''
+
+    comment = ''
+    if hasattr(var, 'description'):
+        comment = var.description
 
     var_info = OrderedDict()
     # Insert fields in order given by CMIP6 cmor tables (https://github.com/PCMDI/cmip6-cmor-tables)
@@ -182,10 +186,10 @@ for var in Vars.records.values():
     var_info.update({
         'units' : phys_param.units,
         'cell_methods' : cell_methods,
-        'cell_measures' : cell_measures,
+        'cell_measures' : ' '.join(cell_measures),
 
         'long_name' : var.title,
-        'comment' : var.description,
+        'comment' : comment,
 
         'dimensions' : ' '.join(dims_list),
         'out_name' : out_name,
@@ -237,6 +241,8 @@ with open(filepath, 'w') as f:
     json.dump(out, f, indent=4)
     print(f'wrote {filepath} for {len(all_var_info)} variables')
 
+
+###############################################################################
 if organize_by_standard_name:
 
     name_in_file = {
@@ -253,7 +259,7 @@ if organize_by_standard_name:
         for name in names:
             sn[name] = OrderedDict()
             for var_name, var_info in all_var_info.items():
-                if var_info[sn_type] == name:
+                if sn_type in var_info and var_info[sn_type] == name:
                     sn[name][var_name] = var_info
         if len(sn) > 0:
             out[name_in_file[sn_type]] = sn

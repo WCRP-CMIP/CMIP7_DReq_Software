@@ -7,7 +7,7 @@ import os
 from collections import OrderedDict
 ###############################################################################
 
-filter_by_cmor_table = True  # False ==> include all tables (i.e., all variables in the data request)
+filter_by_cmor_table = not True  # False ==> include all tables, and include_cmor_tables is ignored
 include_cmor_tables = ['Amon', 'day']
 
 # File containing variable metadata extracted from data request content
@@ -31,6 +31,11 @@ compare_attributes = [
     'type', 
     'positive',     
 ]
+# compare_attributes = ['standard_name']
+# compare_attributes = ['units']
+# compare_attributes = ['dimensions']
+# compare_attributes = ['cell_methods']
+# compare_attributes = ['frequency']
 
 check_min_max_attributes = True
 min_max_attributes = [
@@ -96,8 +101,12 @@ table_header_keep = [
     'mip_era', 
     'Conventions',
 ]
+tables_checked = []
 for table_id in include_cmor_tables:
     filepath = os.path.join(path_tables, filename_template.format(table=table_id))
+    if not os.path.exists(filepath):
+        print(f'{filepath} not found, skipping this table')
+        continue
     with open(filepath, 'r') as f:
         cmor_table = json.load(f)
         print('Loaded ' + filepath)
@@ -108,6 +117,7 @@ for table_id in include_cmor_tables:
         else:
             assert table_header == table_header0, f'inconsistent table header info from {filepath}'
         del cmor_table
+    tables_checked.append(table_id)
 
     # Names of all variables found in the cmor table
     table_var_names = set([f'{table_id}.{variable_id}' for variable_id in table_vars])
@@ -151,7 +161,7 @@ out = OrderedDict({
         'comment': 'Comparison of variable metadata between data request (DREQ) and previous cmor tables (PREV)',
         'cmor tables source' : repo_tables,
         'cmor tables version' : table_header0,
-        'tables checked' : include_cmor_tables,
+        'tables checked' : tables_checked,
     },
     'Compound Name' : diffs
 })
