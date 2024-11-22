@@ -228,14 +228,21 @@ all_var_info = d
 del d
 
 
+# Get provenance of content to include in the Header
+content_path = dc._dreq_content_loaded['json_path']
+with open(content_path, 'rb') as f:
+    content_hash = hashlib.sha256(f.read()).hexdigest()
+
 out = OrderedDict({
     'Header' : OrderedDict({
-        "dreq version": use_dreq_version,
-        "Comment" : "Metadata attributes that characterize CMOR variables. Each variable is uniquely idenfied by a compound name comprised of a CMIP6-era table name and a short variable name."
+        'Description' : 'Metadata attributes that characterize CMOR variables. Each variable is uniquely idenfied by a compound name comprised of a CMIP6-era table name and a short variable name.',
+        'dreq version': use_dreq_version,
+        'dreq content file' : os.path.basename(os.path.normpath(content_path)),
+        'dreq content sha256 hash' : content_hash,
     }),
     'Compound Name' : all_var_info,
 })
-
+ 
 filepath = '_all_var_info.json'
 with open(filepath, 'w') as f:
     json.dump(out, f, indent=4)
@@ -249,6 +256,7 @@ if organize_by_standard_name:
         'standard_name' : 'CF Standard Name',
         'standard_name_proposed' : 'CF Standard Name (Proposed)',
     }
+    n = 0
     for sn_type in ['standard_name', 'standard_name_proposed']:
         names = set()
         for var_info in all_var_info.values():
@@ -261,11 +269,14 @@ if organize_by_standard_name:
             for var_name, var_info in all_var_info.items():
                 if sn_type in var_info and var_info[sn_type] == name:
                     sn[name][var_name] = var_info
+                    n += 1
         if len(sn) > 0:
             out[name_in_file[sn_type]] = sn
     out.pop('Compound Name')
 
+    out['Header']['Description'] += ' Organized by CF standard name.'
+
     filepath = '_var_info_by_standard_name.json'
     with open(filepath, 'w') as f:
         json.dump(out, f, indent=4)
-        print(f'wrote {filepath}')
+        print(f'wrote {filepath} for {n} variables')

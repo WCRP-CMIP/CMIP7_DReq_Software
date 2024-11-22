@@ -63,6 +63,7 @@ _version_pattern = re.compile(
 # Directory where to find/store the data request JSON files
 _dreq_res = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dreq_res")
 
+_dreq_content_loaded = {}
 
 def _parse_version(version):
     """Parse a version tag and return a tuple for sorting.
@@ -574,6 +575,7 @@ def load(version="latest_stable", **kwargs):
     Returns:
         dict: of the loaded JSON file.
     """
+    _dreq_content_loaded['json_path'] = ''
     logger = get_logger()
     if version == "all":
         raise ValueError("Cannot load 'all' versions.")
@@ -585,6 +587,8 @@ def load(version="latest_stable", **kwargs):
     else:
         json_path = next(iter(version_dict.values()))
         logger.info(f"Loading version {next(iter(version_dict.keys()))}'.")
+
+    _dreq_content_loaded['json_path'] = json_path
     with open(json_path) as f:
         if "consolidate" in kwargs:
             if kwargs["consolidate"]:

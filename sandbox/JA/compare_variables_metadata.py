@@ -157,8 +157,10 @@ for table_id in include_cmor_tables:
 
 out = OrderedDict({
     'Header' : {
+        'Description': 'Comparison of variable metadata between data request (DREQ) and previous cmor tables (PREV)',
         'dreq version': dreq_header['dreq version'],
-        'comment': 'Comparison of variable metadata between data request (DREQ) and previous cmor tables (PREV)',
+        'dreq content file' : dreq_header['dreq content file'],
+        'dreq content sha256 hash' : dreq_header['dreq content sha256 hash'],
         'cmor tables source' : repo_tables,
         'cmor tables version' : table_header0,
         'tables checked' : tables_checked,
