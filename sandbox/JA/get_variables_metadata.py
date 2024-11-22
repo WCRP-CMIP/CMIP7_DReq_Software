@@ -276,7 +276,7 @@ if organize_by_standard_name:
 
     out['Header']['Description'] += ' Organized by CF standard name.'
 
-    filepath = '_var_info_by_standard_name.json'
+    filepath = '_all_var_info_by_standard_name.json'
     with open(filepath, 'w') as f:
         json.dump(out, f, indent=4)
         print(f'wrote {filepath} for {n} variables')
