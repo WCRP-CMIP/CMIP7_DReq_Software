@@ -17,6 +17,11 @@ from collections import OrderedDict
 # from importlib import reload
 # reload(dq)
 # reload(dc)
+###############################################################################
+
+
+filter_by_cmor_table = True  # False ==> include all tables (i.e., all variables in the data request)
+include_cmor_tables = ['Amon', 'day']
 
 ###############################################################################
 # Load data request content
@@ -34,12 +39,14 @@ content = dc.load(use_dreq_version)
 base = dq.create_dreq_tables_for_variables(content)
 
 Vars = base['Variables']
+# The Variables table is the master list of variables in the data request.
+# Each entry (row) is a CMOR variable, containing the variable's metadata.
+# Many of these entries are links to other tables in the database (see below).
 
 # Choose which table to use for freqency
 # freq_table_name = 'Frequency'  # not available in v1.0beta release export, need to use CMIP7 or CMIP6 one instead
 # freq_table_name = 'CMIP7 Frequency'
 # freq_table_name = 'CMIP6 Frequency (legacy)'
-
 try_freq_table_name = []
 try_freq_table_name.append('Frequency')
 try_freq_table_name.append('CMIP7 Frequency')
@@ -57,36 +64,37 @@ for freq_table_name in try_freq_table_name:
         Frequency = base[freq_table_name]
     break
 
+# Get other tables from the database that are required to find all of a variable's metadata used by CMOR.
 SpatialShape = base['Spatial Shape']
 Dimensions = base['Coordinates and Dimensions']
 TemporalShape = base['Temporal Shape']
 CellMethods = base['Cell Methods']
 PhysicalParameter = base['Physical Parameters']
-
 CFStandardName = None
 if 'CF Standard Names' in base:
     CFStandardName = base['CF Standard Names']
-
 CMORtables = base['Table Identifiers']
-filter_by_cmor_table = True
-include_cmor_tables = ['Amon', 'day']
-
 Realm = base['Modelling Realm']
 CellMeasures = base['Cell Measures']
 
-
-# Use compound name to look up record id of each variable in the Vars table
+# Compound names will be used to uniquely identify variables.
+# Check here that this is indeed a unique name as expected.
 var_name_map = {record.compound_name : record_id for record_id, record in Vars.records.items()}
 assert len(var_name_map) == len(Vars.records), 'compound names do not uniquely map to variable record ids'
 
 if filter_by_cmor_table:
     print('Retaining only these CMOR tables: ' + ', '.join(include_cmor_tables))
+
+substitute = {
+    # replacement character(s) : [characters to replace with the replacement character]
+    '_' : ['\\_']
+}
 all_var_info = {}
 for var in Vars.records.values():
 
+    assert len(var.table) == 1
+    table_id = CMORtables.get_record(var.table[0]).name
     if filter_by_cmor_table:
-        assert len(var.table) == 1
-        table_id = CMORtables.get_record(var.table[0]).name
         if table_id not in include_cmor_tables:
             continue
 
@@ -188,11 +196,16 @@ for var in Vars.records.values():
         # 'verticalLabelDD' : spatial_shape.vertical_label_dd,
         # 'horizontalLabelDD' : spatial_shape.hor_label_dd,
         # 'areaLabelDD' : area_label_dd,  # this comes from cell methods
+
+        'cmip6_cmor_table' : table_id,
     })
     for k,v in var_info.items():
-        var_info[k] = v.strip()
-
-    # var_name = dq.get_unique_var_name(var) # type of name used is set by dreq_classes.UNIQUE_VAR_NAME
+        v = v.strip()
+        for replacement in substitute:
+            for s in substitute[replacement]:
+                if s in v:
+                    v = v.replace(s, replacement)
+        var_info[k] = v
     var_name = var.compound_name  # note, comment in Header below refers to Compound Name, so update it if this changes
     assert var_name not in all_var_info, 'non-unique variable name: ' + var_name
     all_var_info[var_name] = var_info
@@ -213,7 +226,7 @@ d = OrderedDict({
         "dreq version": use_dreq_version,
         "Comment" : "Metadata attributes that characterize CMOR variables. Each variable is uniquely idenfied by a compound name comprised of a CMIP6-era table name and a short variable name."
     }),
-    dq.UNIQUE_VAR_NAME : all_var_info,
+    'Compound Name' : all_var_info,
 })
 
 filepath = '_all_var_info.json'
