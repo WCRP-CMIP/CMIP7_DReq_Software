@@ -55,8 +55,8 @@ add_paths = ['../sandbox/MS/dreq_api/', '../sandbox/JA', '../sandbox/GR']
 for path in add_paths:
     if path not in sys.path:
         sys.path.append(path)
-import dreq_content as dc
-import dreq_query as dq
+from data_request_api.stable.content.dreq_api import dreq_content as dc
+from data_request_api.stable.query import dreq_query as dq
 
 from importlib import reload
 reload(dq)
