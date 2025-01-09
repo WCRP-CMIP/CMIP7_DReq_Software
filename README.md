@@ -94,6 +94,40 @@ The `-h` option provides further usage guidance:
 ./export_dreq_lists_json.py -h
 ```
 
+## Pip installation
+
+If you have a conda environment which already has the dependencies of
+this package you can install the code using
+```bash
+python -m pip install git+https://github.com/CMIP-Data-Request/CMIP7_DReq_Software.git@<tag>
+```
+where `<tag>` needs to be replaced with the version you wish to
+install.
+
+If installation is successful you should be able to run the command 
+```bash
+export_dreq_lists_json --all_opportunities v1.0 amip.json --experiments amip
+```
+To confirm that the variable list for the amip experiment can be
+produced.
+
+To install from a local copy for development purposes cd to the root
+of the repository and run
+```bash
+python -m pip install -e .
+```
+
+The package can be uninstalled using
+```bash
+python -m pip uninstall CMIP7_AR7_FT_data_request_api
+```
+
+### Development: addition of command line tools
+
+Command line utilities should be hosted under the
+`data_request_api.command_line` package and pointed at by adding
+references to the appropriate `main()` routine into the 
+`[project:scripts]` section of the pyproject.toml file.
 
 ## Further details
 
