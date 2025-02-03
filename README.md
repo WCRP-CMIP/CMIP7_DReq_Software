@@ -49,7 +49,7 @@ This view is complementary to the access to the Content that is provided via the
 
 Using the data request **Software** provides a way to interact programmatically with the data request Content, such as to:
 
-- Given a list of supported opportunities and their priorities, produce lists of variables to output for each experiment (see Getting Started section to test this functionality),
+- Given a list of supported Opportunities and their priorities, produce lists of variables to output for each experiment (see Getting Started section to test this functionality),
 - Output the CF-compliant metadata characterizing each variable - an example file with some of the metadata for each requested variable is [available since v1.0](https://github.com/CMIP-Data-Request/CMIP7_DReq_Software/tree/main/scripts/variable_info/all_var_info.json),
 - Compare the requested output of CMIP7 experiments to a given model's published CMIP6 output.
 
@@ -64,7 +64,7 @@ Stable releases will eventually be migrated into the https://github.com/WCRP-CMI
 ## Quick Start
 
 To get started by cloning from github, in a shell session clone the Software and navigate to the `scripts/` directory:
-```
+```bash
 git clone git@github.com:CMIP-Data-Request/CMIP7_DReq_Software.git
 cd CMIP7_DReq_Software
 ```
@@ -73,19 +73,19 @@ Alternately, see below for instructions on installing using `pip`, but note the 
 ### Environment setup
 
 The `env.yml` file can be used to create a conda environment in which to run the Software:
-```
+```bash
 conda env create -n my_dreq_env --file env.yml
 ```
 where `my_dreq_env` should be replaced with your preferred environment name. 
 Activate this environment:
-```
+```bash
 conda activate my_dreq_env
 ```
 (On some systems it may be `source activate my_dreq_env`.)
 Note that `env.yml` explicitly avoids using the conda `defaults` channel.
 
 Alternately, the `requirements.txt` file  can be used to create a python virtual environment:
-```
+```bash
 python -m venv my_dreq_env_dir
 source my_dreq_env_dir/bin/activate
 pip install --upgrade pip
@@ -98,15 +98,13 @@ This approach avoids using `conda`, although note that the package currently req
 
 There are two example workflow scripts in the `scripts/` directory. 
 In a shell session where the environment (conda or venv/virtualenv, as explained above) has been activated, running:
-```
+```bash
 python workflow_example.py
 ```
 will produce a `json` file listing requested variables for each CMIP7 experiment.
-The same functionality is available from a command-line interface. To access this interface 
-we recommend installing the python package using pip (see below) and then using the
-`export_dreq_lists_json` command.
+The same functionality is available from a **command-line interface**, which can be accessed by installing the python package using pip (see below) and then using the `export_dreq_lists_json` command.
 Running:
-```
+```bash
 python workflow_example_2.py
 ```
 will produce a set of `csv` files (i.e., spreadsheets) summarizing different aspects of the data request content.
@@ -126,21 +124,30 @@ If installation is successful you should be able to run the command
 ```bash
 export_dreq_lists_json --all_opportunities v1.1 amip.json --experiments amip
 ```
-To confirm that the variable list for the amip experiment can be
-produced.
-
-To install from a local copy for development purposes cd to the root
-of the repository and run
+to confirm that the variable list for the amip experiment can be produced.
+Multiple experiments can be specified as a space-delimited list of case-sensitive experiment names (e.g., `--experiments amip historical piControl`).
+Omitting the `--experiments` argument is equivalent to including all experiments in the data request.
+To produce variable lists that support only a subset of Opportunities, use the `--opportunities_file` argument by running:
 ```bash
-python -m pip install -e .
+export_dreq_lists_json --opportunities_file opportunities.json v1.1 output.json
 ```
+This will generate the `opportunities.json` template file in which Opportunity support can be specified (note that the list of available Opportunities may be updated in newer data request versions).
+Edit this file to by setting unsupported Opportunities to `false` and then re-run the exact same command as above to generate the output file with lists of requested variables.
 
 The package can be uninstalled using
 ```bash
 python -m pip uninstall CMIP7_data_request_api
 ```
 
-### Development: addition of command line tools
+
+
+### Development
+
+To install from a local copy for development purposes cd to the root
+of the repository and run
+```bash
+python -m pip install -e .
+```
 
 Command line utilities should be hosted under the
 `data_request_api.command_line` package and pointed at by adding
@@ -159,22 +166,22 @@ Variable names may change in upcoming releases, but in any case a mapping to CMI
 To access the data request Content, the example script first needs to identify the version of the data request Content that is being used. 
 This is done in the example script by specifying a tag in the Content repo and calling the retrieval function.
 For example:
-```
+```python
 dc.retrieve('v1.1')
 ```
 downloads `v1.1` of the Content into local cache, if it is not already there.
 The script can then access it by loading it into a python dict variable:
-```
+```python
 content = dc.load('v1.1')
 ```
 Currently a single version of the Content `json` file for a versioned release is roughly 20 MB in size.
 The size of local cache can be managed by deleting unused versions.
 For example, to remove a specific version:
-```
+```python
 dc.delete('v1.1')
 ```
 Or to remove all locally cached versions:
-```
+```python
 dc.delete()
 ```
 
