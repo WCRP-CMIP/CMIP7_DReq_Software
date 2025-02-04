@@ -18,11 +18,14 @@ def parse_args():
     Parse command line arguments
     """
 
+    priority_levels = [s.capitalize() for s in dq.PRIORITY_LEVELS]
+
     parser = argparse.ArgumentParser()
     parser.add_argument('dreq_version', choices=dc.get_versions(), help="data request version")
     parser.add_argument('--opportunities_file', type=str, help="path to JSON file listing opportunities to respond to. If it doesn't exist a template will be created")
-    parser.add_argument('--all_opportunities', action='store_true', help="Respond to all opportunities")
+    parser.add_argument('--all_opportunities', action='store_true', help="respond to all opportunities")
     parser.add_argument('--experiments', nargs='+', type=str, help='limit output to the specified experiments (space-delimited list, case sensitive)')
+    parser.add_argument('--priority_cutoff', default='Low', choices=priority_levels, help="discard variables that are requested at lower priority than this cutoff priority")
     parser.add_argument('output_file', help='file to write JSON output to')
     return parser.parse_args()
 
@@ -63,8 +66,7 @@ def main():
 
     # Get consolidated list of requested variables that supports these opportunities
     dq.DREQ_VERSION = use_dreq_version
-    priority_cutoff = 'Low'
-    expt_vars = dq.get_requested_variables(content, use_opps, priority_cutoff=priority_cutoff, verbose=False)
+    expt_vars = dq.get_requested_variables(content, use_opps, priority_cutoff=args.priority_cutoff, verbose=False)
 
     # filter output by requested experiments
     if args.experiments:
@@ -82,7 +84,7 @@ def main():
         # Write json file with the variable lists
         content_path = dc._dreq_content_loaded['json_path']
         outfile = args.output_file
-        dq.write_requested_vars_json(outfile, expt_vars, use_dreq_version, priority_cutoff, content_path)
+        dq.write_requested_vars_json(outfile, expt_vars, use_dreq_version, args.priority_cutoff, content_path)
 
     else:
         print(f'\nFor data request version {use_dreq_version}, no requested variables were found')

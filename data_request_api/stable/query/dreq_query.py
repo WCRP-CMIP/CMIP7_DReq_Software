@@ -937,6 +937,7 @@ def write_requested_vars_json(outfile, expt_vars, use_dreq_version, priority_cut
         'Opportunities supported' : sorted(expt_vars['Header']['Opportunities'], key=str.lower)
     })
 
+    # List supported priority levels
     priority_levels=get_priority_levels()
     priority_cutoff = priority_cutoff.capitalize()
     m = priority_levels.index(priority_cutoff)+1
@@ -946,7 +947,12 @@ def write_requested_vars_json(outfile, expt_vars, use_dreq_version, priority_cut
     for req in expt_vars['experiment'].values():
         for p in priority_levels[m:]:
             assert req[p] == []
-            req.pop(p)
+            req.pop(p) # remove empty lists of unsupported priorities from the output
+
+    # List included experiments
+    Header.update({
+        'Experiments included' : sorted(expt_vars['experiment'].keys(), key=str.lower)
+    })
 
     # Get provenance of content to include in the Header
     # content_path = dc._dreq_content_loaded['json_path']
