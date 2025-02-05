@@ -1,10 +1,22 @@
 [build-system]
-requires = ["setuptools>=61.0", "pooch", "openpyxl", "requests", "bs4", "coverage", "pytest"]
+requires = ["setuptools>=61.0", "coverage", "pytest","setuptools_scm"]
 build-backend = "setuptools.build_meta"
+
+
 
 [project]
 name = "CMIP7_data_request_api"
-version = "1.1.0"
+dependencies = [
+    "pooch",
+    "openpyxl",
+    "requests",
+    "beautifulsoup4",  # Use the correct package name for `bs4`
+]
+
+
+# version is dynamically set from the tag on the github repo
+dynamic = ["version","authors"]  # Let setuptools_scm handle versioning
+
 authors = [
   { name="James Anstey"},
   { name="Gaëlle Rigoudy"},
@@ -22,6 +34,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+
 
 [project.urls]
 Homepage = "https://github.com/CMIP-Data-Request/CMIP7_DReq_Software"
@@ -61,3 +74,6 @@ output = "tests/coverage.json"
 
 [tool.coverage.lcov]
 output = "tests.coverage.lcov"
+
+[tool.setuptools_scm]
+write_to = "data_request_api/version.py"
